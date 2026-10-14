@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>T04 - 오늘의 진짜 정보판</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            darkbg: '#121212',
+            darkcard: '#1e1e1e',
+            darkborder: '#333333',
+            darktext: '#e0e0e0',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Dynamic root font-size control for TC-03 ~ TC-09 */
+    :root {
+      --base-font-size: 14px;
+    }
+    body {
+      font-size: var(--base-font-size);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease, font-size 0.2s ease;
+    }
+    
+    /* Custom Theme Colors (TC-06, TC-07) */
+    body.theme-yellow {
+      background-color: #fef9c3 !important;
+      color: #713f12 !important;
+    }
+    body.theme-yellow .custom-card {
+      background-color: #fef08a !important;
+      border-color: #fde047 !important;
+      color: #713f12 !important;
+    }
+    body.theme-blue {
+      background-color: #e0f2fe !important;
+      color: #0c4a6e !important;
+    }
+    body.theme-blue .custom-card {
+      background-color: #bae6fd !important;
+      border-color: #7dd3fc !important;
+      color: #0c4a6e !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-darkbg dark:text-darktext p-4 md:p-6 min-h-screen">
+  <div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Header & Accessibility Customization Panel (TC-01 ~ TC-10) -->
+    <header class="flex flex-col gap-4 pb-4 border-b-2 border-gray-800 dark:border-gray-600">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <h1 class="text-2xl font-bold">오늘의 진짜 정보판 (T04)</h1>
+        <!-- TC-10: 커스텀 설정 초기화 버튼 -->
+        <button id="btn-reset" onclick="resetCustomizations()" class="px-3 py-1 text-xs font-semibold rounded bg-red-600 hover:bg-red-700 text-white transition shadow-sm">
+          🔄 설정 초기화 (TC-10)
+        </button>
+      </div>
+
+      <!-- Accessibility Toolbar -->
+      <div class="flex flex-col gap-3 custom-card bg-white dark:bg-darkcard p-3.5 rounded-lg border border-gray-300 dark:border-darkborder shadow-sm">
+        
+        <!-- Theme Controls (TC-01, TC-02, TC-06, TC-07) -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">테마:</span>
+          <button id="btn-theme-light" onclick="setTheme('light')" class="px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+            ☀️ 라이트 (TC-02)
+          </button>
+          <button id="btn-theme-dark" onclick="setTheme('dark')" class="px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+            🌙 다크 (TC-01)
+          </button>
+          <!-- TC-06: 노란색 테마 -->
+          <button id="btn-theme-yellow" onclick="setTheme('yellow')" class="px-2.5 py-1 text-xs font-medium rounded border border-yellow-300 bg-yellow-100 text-yellow-900 hover:bg-yellow-200 transition">
+            🟡 노란색 (TC-06)
+          </button>
+          <!-- TC-07: 파란색 테마 -->
+          <button id="btn-theme-blue" onclick="setTheme('blue')" class="px-2.5 py-1 text-xs font-medium rounded border border-sky-300 bg-sky-100 text-sky-900 hover:bg-sky-200 transition">
+            🔵 파란색 (TC-07)
+          </button>
+        </div>
+
+        <div class="h-px bg-gray-200 dark:bg-gray-700 w-full"></div>
+
+        <!-- Font Size Controls (TC-03 ~ TC-09) -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">글자 크기:</span>
+          <div class="flex items-center gap-1">
+            <button id="btn-font-10" onclick="setFontSize('10px')" class="px-2 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+              10px (TC-05)
+            </button>
+            <button id="btn-font-14" onclick="setFontSize('14px')" class="px-2 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+              14px (TC-04)
+            </button>
+            <button id="btn-font-20" onclick="setFontSize('20px')" class="px-2 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+              20px (TC-03)
+            </button>
+          </div>
+
+          <!-- TC-08, TC-09: 직접 입력 창 및 적용 버튼 -->
+          <div class="flex items-center gap-1.5 ml-auto sm:ml-2">
+            <input type="number" id="custom-font-input" placeholder="10-30" min="10" max="30" class="w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            <span class="text-xs">px</span>
+            <button onclick="applyCustomFontSize()" class="px-2.5 py-1 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700 transition">
+              적용 (TC-08)
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Main Data Card -->
+    <main class="custom-card bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder p-6 rounded-xl shadow-sm space-y-4">
+      <div class="flex items-center">
+        <span class="font-bold opacity-75 w-32 inline-block">항목:</span>
+        <strong class="text-lg">비트코인(BTC) 현재가</strong>
+      </div>
+
+      <!-- C04, C05: Value and Unit Display -->
+      <div class="text-3xl font-bold my-3 text-blue-600 dark:text-blue-400 flex items-center gap-3">
+        <span id="val">-</span> <span id="unit" class="text-2xl">KRW</span>
+        <!-- C18: Stale badge -->
+        <span id="stale-badge" class="bg-orange-500 text-white text-xs px-2.5 py-1 rounded font-normal" style="display:none;">
+          오래된 값 (stale)
+        </span>
+      </div>
+
+      <!-- C24: Daily Difference Display -->
+      <div class="bg-gray-100 dark:bg-gray-800/60 p-3 rounded-md font-bold my-3 border border-gray-200 dark:border-gray-700">
+        <span class="font-bold opacity-75 w-32 inline-block">어제 대비 변화:</span>
+        <span id="diff-val" class="ml-1">-</span>
+      </div>
+
+      <!-- C06~C09: Metadata -->
+      <div class="space-y-2 text-sm pt-2 border-t border-gray-200 dark:border-gray-800">
+        <div class="flex flex-col sm:flex-row"><span class="font-bold opacity-75 w-32">출처 URL:</span> <span id="source" class="break-all opacity-90">-</span></div>
+        <div><span class="font-bold opacity-75 w-32 inline-block">출처 관측 시각:</span> <span id="source-time">-</span></div>
+        <div><span class="font-bold opacity-75 w-32 inline-block">조회 시각:</span> <span id="fetched-at">-</span></div>
+        <div><span class="font-bold opacity-75 w-32 inline-block">기준 시간대:</span> <span id="timezone">Asia/Seoul</span></div>
+      </div>
+
+      <!-- C12~C16: Error Message Box -->
+      <div id="status-msg" class="text-red-600 bg-red-100 dark:bg-red-950/60 dark:text-red-400 p-3 rounded-md font-bold mt-3 border border-red-200 dark:border-red-900" style="display:none;"></div>
+      
+      <!-- C19: Retry Button -->
+      <button id="retry-btn" onclick="fetchData()" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition" style="display:none;">
+        다시 시도
+      </button>
+    </main>
+
+    <!-- Daily Records Section (C22, C23) -->
+    <section class="custom-card bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder p-6 rounded-xl shadow-sm">
+      <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+        <span>📊</span> 저장된 일별 기록 <span class="text-xs font-normal opacity-75">(Asia/Seoul 기준)</span>
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse border border-gray-200 dark:border-gray-700 text-sm">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-gray-800 opacity-90">
+              <th class="border border-gray-200 dark:border-gray-700 p-2.5">날짜(KST)</th>
+              <th class="border border-gray-200 dark:border-gray-700 p-2.5">값</th>
+              <th class="border border-gray-200 dark:border-gray-700 p-2.5">단위</th>
+              <th class="border border-gray-200 dark:border-gray-700 p-2.5">관측 시각</th>
+            </tr>
+          </thead>
+          <tbody id="records-table" class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr><td colspan="4" class="text-center p-4 text-gray-500">저장된 기록이 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Fixture Testing Control Panel -->
+    <section class="custom-card bg-white dark:bg-darkcard border border-gray-300 dark:border-darkborder p-6 rounded-xl shadow-sm space-y-3">
+      <h2 class="text-lg font-bold flex items-center gap-2">
+        <span>🧪</span> 실패 및 복구 재현 시험 (Fixture)
+      </h2>
+      <p class="text-xs opacity-75">아래 버튼을 클릭하여 합성 시험값(Fixture)을 재현합니다.</p>
+      
+      <div class="flex flex-wrap gap-2 pt-1">
+        <button onclick="runFixture('delay')" class="px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          1. 느린 응답 (C12)
+        </button>
+        <button onclick="runFixture('http_401')" class="px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          2. 401/403 거절 (C13)
+        </button>
+        <button onclick="runFixture('rate_limit')" class="px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          3. 호출 제한 (C14)
+        </button>
+        <button onclick="runFixture('offline')" class="px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          4. 오프라인 (C15)
+        </button>
+        <button onclick="runFixture('schema')" class="px-3 py-1.5 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          5. 스키마 변경 (C16)
+        </button>
+      </div>
+
+      <hr class="border-gray-200 dark:border-gray-700 my-3"/>
+
+      <div class="flex flex-wrap gap-2">
+        <button onclick="runFixture('recover_d2')" class="px-3.5 py-2 text-xs font-semibold rounded text-white bg-emerald-600 hover:bg-emerald-700 transition">
+          복구 Asset (T04-RECOVER-D2)
+        </button>
+        <button onclick="fetchData()" class="px-3.5 py-2 text-xs font-semibold rounded text-white bg-blue-600 hover:bg-blue-700 transition">
+          실시간 정상 조회
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "t04_daily_records";
+    const THEME_KEY = "t04_theme_pref";
+    const FONT_KEY = "t04_font_pref";
+    const API_URL = "https://api.bithumb.com/public/ticker/BTC_KRW";
+
+    // -------------------------------------------------------------
+    // Theme (TC-01, TC-02, TC-06, TC-07) and Font Logic (TC-03 ~ TC-10)
+    // -------------------------------------------------------------
+
+    // TC-01, TC-02, TC-06, TC-07: Theme Customization
+    function setTheme(mode) {
+      const htmlEl = document.documentElement;
+      const bodyEl = document.body;
+
+      // Reset all theme classes first
+      htmlEl.classList.remove('dark');
+      bodyEl.classList.remove('theme-yellow', 'theme-blue');
+
+      const buttons = {
+        light: document.getElementById('btn-theme-light'),
+        dark: document.getElementById('btn-theme-dark'),
+        yellow: document.getElementById('btn-theme-yellow'),
+        blue: document.getElementById('btn-theme-blue')
+      };
+
+      // Clear button focus styles
+      Object.values(buttons).forEach(btn => {
+        if (btn) btn.classList.remove('ring-2', 'ring-blue-500');
+      });
+
+      if (mode === 'dark') {
+        htmlEl.classList.add('dark');
+        if (buttons.dark) buttons.dark.classList.add('ring-2', 'ring-blue-500');
+      } else if (mode === 'yellow') {
+        bodyEl.classList.add('theme-yellow');
+        if (buttons.yellow) buttons.yellow.classList.add('ring-2', 'ring-blue-500');
+      } else if (mode === 'blue') {
+        bodyEl.classList.add('theme-blue');
+        if (buttons.blue) buttons.blue.classList.add('ring-2', 'ring-blue-500');
+      } else {
+        // Default light mode
+        mode = 'light';
+        if (buttons.light) buttons.light.classList.add('ring-2', 'ring-blue-500');
+      }
+
+      localStorage.setItem(THEME_KEY, mode);
+    }
+
+    // TC-03 ~ TC-08: Set Font Size
+    function setFontSize(size) {
+      // Ensure unit is appended if missing
+      const sizeStr = typeof size === 'number' || !size.endsWith('px') ? `${size}px` : size;
+      document.documentElement.style.setProperty('--base-font-size', sizeStr);
+      localStorage.setItem(FONT_KEY, sizeStr);
+
+      // Highlight active standard buttons if applicable
+      ['10px', '14px', '20px'].forEach(s => {
+        const btn = document.getElementById(`btn-font-${s.replace('px', '')}`);
+        if (btn) {
+          if (s === sizeStr) {
+            btn.classList.add('ring-2', 'ring-blue-500', 'font-bold');
+          } else {
+            btn.classList.remove('ring-2', 'ring-blue-500', 'font-bold');
+          }
+        }
+      });
+    }
+
+    // TC-08, TC-09: Direct Font Size Input with Validation
+    function applyCustomFontSize() {
+      const inputEl = document.getElementById('custom-font-input');
+      const val = parseInt(inputEl.value, 10);
+
+      // TC-09: Range validation (10px ~ 30px)
+      if (isNaN(val) || val < 10 || val > 30) {
+        alert("⚠️ 글자 크기는 10px에서 30px 사이의 숫자만 입력 가능합니다.");
+        inputEl.focus();
+        return;
+      }
+
+      setFontSize(`${val}px`);
+      inputEl.value = '';
+    }
+
+    // TC-10: Reset Customizations
+    function resetCustomizations() {
+      localStorage.removeItem(THEME_KEY);
+      localStorage.removeItem(FONT_KEY);
+      initCustomizations();
+    }
+
+    // Load saved settings
+    function initCustomizations() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+      setTheme(savedTheme);
+
+      const savedFont = localStorage.getItem(FONT_KEY) || '14px';
+      setFontSize(savedFont);
+    }
+
+    // -------------------------------------------------------------
+    // Existing T04 Business Logic
+    // -------------------------------------------------------------
+
+    // C20, C21: Get KST Date String (YYYY-MM-DD)
+    function getKSTDateStr(dateObj = new Date()) {
+      const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
+      const kstOffset = 9 * 60 * 60000;
+      const kstDate = new Date(utc + kstOffset);
+      return kstDate.toISOString().split('T')[0];
+    }
+
+    // Retrieve stored records
+    function getStoredRecords() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    }
+
+    // C20, C21: Merge single record per day
+    function saveRecord(newRecord) {
+      let records = getStoredRecords();
+      const existingIdx = records.findIndex(r => r.date === newRecord.date);
+      
+      if (existingIdx >= 0) {
+        records[existingIdx] = newRecord; // C20: Merge/overwrite if same day
+      } else {
+        records.push(newRecord);          // C21: Add new record for next day
+      }
+      
+      records.sort((a, b) => a.date.localeCompare(b.date));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      renderRecordsTable(records);
+      updateDiffDisplay(records);
+    }
+
+    // C24: Calculate yesterday vs today difference
+    function updateDiffDisplay(records) {
+      const diffEl = document.getElementById("diff-val");
+      if (records.length < 2) {
+        diffEl.textContent = "비교 기록 부족 (2일 이상 필요 - RECOVER-D2 버튼을 눌러 생성 가능)";
+        diffEl.className = "text-gray-500 dark:text-gray-400 font-normal";
+        return;
+      }
+
+      const yesterdayRecord = records[records.length - 2];
+      const todayRecord = records[records.length - 1];
+
+      const prev = yesterdayRecord.rawNum;
+      const curr = todayRecord.rawNum;
+      const diff = curr - prev;
+
+      if (diff > 0) {
+        diffEl.textContent = `+${diff.toLocaleString()} KRW (상승)`;
+        diffEl.className = "text-red-600 dark:text-red-400 font-bold";
+      } else if (diff < 0) {
+        diffEl.textContent = `${diff.toLocaleString()} KRW (하락)`;
+        diffEl.className = "text-blue-600 dark:text-blue-400 font-bold";
+      } else {
+        diffEl.textContent = "0 KRW (변동 없음)";
+        diffEl.className = "text-gray-700 dark:text-gray-300 font-bold";
+      }
+    }
+
+    // Render table
+    function renderRecordsTable(records) {
+      const tbody = document.getElementById("records-table");
+      if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-gray-500">저장된 기록이 없습니다.</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = records.map(r => `
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+          <td class="border border-gray-200 dark:border-gray-700 p-2.5 font-bold">${r.date}</td>
+          <td class="border border-gray-200 dark:border-gray-700 p-2.5">${Number(r.rawNum).toLocaleString()}</td>
+          <td class="border border-gray-200 dark:border-gray-700 p-2.5">${r.unit}</td>
+          <td class="border border-gray-200 dark:border-gray-700 p-2.5 text-xs opacity-75">${r.sourceTime}</td>
+        </tr>
+      `).join('');
+    }
+
+    // C10, C17, C18: UI Update and Stale Badge logic
+    function updateUI(data, isStale = false, errorCode = "none", errorMsg = "") {
+      if (data) {
+        // C10: Raw vs Stored vs Display value match
+        document.getElementById("val").textContent = Number(data.rawNum).toLocaleString();
+        document.getElementById("unit").textContent = data.unit;
+        document.getElementById("source").textContent = data.source;
+        document.getElementById("source-time").textContent = data.sourceTime;
+        document.getElementById("fetched-at").textContent = data.fetchedAt;
+        document.getElementById("timezone").textContent = data.timezone;
+      }
+
+      // C18: Display stale badge on failure
+      document.getElementById("stale-badge").style.display = isStale ? "inline-block" : "none";
+
+      // C19: Show retry button and error message on error
+      const statusEl = document.getElementById("status-msg");
+      const retryBtn = document.getElementById("retry-btn");
+      if (errorMsg) {
+        statusEl.textContent = `[에러 코드: ${errorCode}] ${errorMsg}`;
+        statusEl.style.display = "block";
+        retryBtn.style.display = "inline-block";
+      } else {
+        statusEl.style.display = "none";
+        retryBtn.style.display = "none";
+      }
+
+      updateDiffDisplay(getStoredRecords());
+    }
+
+    // C03, C11: Live API Fetching
+    async function fetchData() {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error(`HTTP 에러 상태코드: ${response.status}`);
+        
+        const result = await response.json();
+        if (result.status !== "0000") throw new Error("API 응답 status 에러");
+
+        const record = {
+          date: getKSTDateStr(),
+          rawNum: Number(result.data.closing_price),
+          unit: "KRW",
+          source: API_URL,
+          sourceTime: new Date(Number(result.data.date)).toISOString(),
+          fetchedAt: new Date().toISOString(),
+          timezone: "Asia/Seoul"
+        };
+
+        saveRecord(record);
+        updateUI(record, false, "none", "");
+      } catch (err) {
+        // C17: Preserve last valid value as stale on error
+        const records = getStoredRecords();
+        const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+        updateUI(lastRecord, true, "FETCH_ERROR", `실제 조회 실패: ${err.message}`);
+      }
+    }
+
+    // C12~C16, C19: Fixtures and Recovery Test
+    function runFixture(type) {
+      const records = getStoredRecords();
+      const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+
+      switch(type) {
+        case 'delay':
+          updateUI(lastRecord, true, "TIMEOUT", "느린 외부 응답으로 인한 시간 초과가 발생했습니다.");
+          break;
+        case 'http_401':
+          updateUI(lastRecord, true, "HTTP_403", "외부 원천 접근권한이 거절되었습니다 (401/403).");
+          break;
+        case 'rate_limit':
+          updateUI(lastRecord, true, "RATE_LIMIT", "외부 원천 호출 제한 횟수를 초과했습니다 (429).");
+          break;
+        case 'offline':
+          updateUI(lastRecord, true, "OFFLINE", "인터넷 연결이 오프라인 상태입니다.");
+          break;
+        case 'schema':
+          updateUI(lastRecord, true, "SCHEMA_MISMATCH", "외부 원천 응답 스키마/형식이 변경되었습니다.");
+          break;
+        case 'recover_d2':
+          const baseDateStr = lastRecord ? lastRecord.date : getKSTDateStr();
+          const baseDate = new Date(baseDateStr);
+          baseDate.setDate(baseDate.getDate() + 1);
+          const nextDayStr = baseDate.toISOString().split('T')[0];
+
+          const recoverD2Record = {
+            date: nextDayStr,
+            rawNum: (lastRecord ? lastRecord.rawNum : 95000000) + 1500000,
+            unit: "KRW",
+            source: API_URL,
+            sourceTime: new Date().toISOString(),
+            fetchedAt: new Date().toISOString(),
+            timezone: "Asia/Seoul"
+          };
+          saveRecord(recoverD2Record);
+          updateUI(recoverD2Record, false, "none", "");
+          break;
+      }
+    }
+
+    // On Load Initialization
+    window.onload = () => {
+      initCustomizations();
+      const records = getStoredRecords();
+      renderRecordsTable(records);
+      fetchData();
+    };
+  </script>
+</body>
+</html>

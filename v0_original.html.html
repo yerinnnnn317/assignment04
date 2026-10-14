@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>T04 - 오늘의 진짜 정보판</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; line-height: 1.6; max-width: 650px; margin: 0 auto; background: #f8f9fa; color: #333; }
+    h2 { border-bottom: 2px solid #333; padding-bottom: 8px; }
+    .card { border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .label { font-weight: bold; color: #666; width: 120px; display: inline-block; }
+    .row { margin-bottom: 8px; }
+    .value-box { font-size: 2em; font-weight: bold; margin: 12px 0; color: #0d6efd; display: flex; align-items: center; gap: 10px; }
+    .stale-badge { background: #fd7e14; color: white; font-size: 0.4em; padding: 4px 8px; border-radius: 4px; vertical-align: middle; }
+    .diff-box { background: #f1f3f5; padding: 10px 14px; border-radius: 6px; font-weight: bold; margin: 12px 0; }
+    .diff-up { color: #dc3545; }
+    .diff-down { color: #0d6efd; }
+    .error-box { color: #dc3545; background: #ffe3e3; padding: 10px; border-radius: 6px; font-weight: bold; margin-top: 12px; }
+    .url-text { word-break: break-all; font-size: 0.85em; color: #666; }
+    .control-panel { margin-top: 24px; padding: 18px; border: 1px solid #ced4da; border-radius: 10px; background: #fff; }
+    button { padding: 8px 12px; margin: 4px 2px; cursor: pointer; border-radius: 6px; border: 1px solid #ccc; background: #fff; font-weight: 600; }
+    button:hover { background: #e9ecef; }
+    .btn-primary { background: #0d6efd; color: white; border: none; }
+    .btn-primary:hover { background: #0b5ed7; }
+    .btn-success { background: #198754; color: white; border: none; }
+    .btn-success:hover { background: #157347; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em; }
+    th, td { border: 1px solid #dee2e6; padding: 6px 8px; text-align: left; }
+    th { background: #f1f3f5; }
+  </style>
+</head>
+<body>
+  <h2>오늘의 진짜 정보판 (T04)</h2>
+  
+  <div class="card">
+    <div class="row"><span class="label">항목:</span> <strong>비트코인(BTC) 현재가</strong></div>
+    
+    <!-- C04, C05: 값 및 단위 표시 -->
+    <div class="value-box">
+      <span id="val">-</span> <span id="unit">KRW</span>
+      <!-- C18: stale(오래된 값) 표시 -->
+      <span id="stale-badge" class="stale-badge" style="display:none;">오래된 값 (stale)</span>
+    </div>
+    
+    <!-- C24: 어제 대비 변화량 표시 -->
+    <div class="diff-box">
+      <span class="label">어제 대비 변화:</span> <span id="diff-val">-</span>
+    </div>
+
+    <!-- C06~C09: 필수 정보 6가지 표출 -->
+    <div class="row"><span class="label">출처 URL:</span> <br/><span id="source" class="url-text">-</span></div>
+    <div class="row"><span class="label">출처 관측 시각:</span> <span id="source-time">-</span></div>
+    <div class="row"><span class="label">조회 시각:</span> <span id="fetched-at">-</span></div>
+    <div class="row"><span class="label">기준 시간대:</span> <span id="timezone">Asia/Seoul</span></div>
+    
+    <!-- C12~C16: 에러 상태 메시지 -->
+    <div id="status-msg" class="error-box" style="display:none;"></div>
+    <!-- C19: 실패 시 다시 시도 버튼 노출 -->
+    <button id="retry-btn" class="btn-primary" onclick="fetchData()" style="display:none; margin-top: 12px;">다시 시도</button>
+  </div>
+
+  <!-- C22, C23: 일별 저장 기록 확인 (2일치 기록 유지 보존) -->
+  <div style="margin-top: 20px;">
+    <h3>📊 저장된 일별 기록 (Asia/Seoul 기준)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>날짜(KST)</th>
+          <th>값</th>
+          <th>단위</th>
+          <th>관측 시각</th>
+        </tr>
+      </thead>
+      <tbody id="records-table">
+        <tr><td colspan="4" style="text-align:center;">저장된 기록이 없습니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 카드 3: 다섯 가지 실패 및 복구(RECOVER-D2) 재현 통제판 -->
+  <div class="control-panel">
+    <h3>🧪 실패 및 복구 재현 시험 (Fixture)</h3>
+    <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">아래 버튼을 클릭하여 합성 시험값(Fixture)을 재현합니다.</p>
+    <button onclick="runFixture('delay')">1. 느린 응답 (C12)</button>
+    <button onclick="runFixture('http_401')">2. 401/403 거절 (C13)</button>
+    <button onclick="runFixture('rate_limit')">3. 호출 제한 (C14)</button>
+    <button onclick="runFixture('offline')">4. 오프라인 (C15)</button>
+    <button onclick="runFixture('schema')">5. 스키마 변경 (C16)</button>
+    <hr style="border:0; border-top:1px solid #eee; margin:10px 0;"/>
+    <!-- C19: RECOVER-D2 재현 시 fresh 복구 및 다음 날 기록 추가 -->
+    <button class="btn-success" onclick="runFixture('recover_d2')">복구 Asset (T04-RECOVER-D2)</button>
+    <button class="btn-primary" onclick="fetchData()">실시간 정상 조회</button>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "t04_daily_records";
+    const API_URL = "https://api.bithumb.com/public/ticker/BTC_KRW";
+
+    // C20, C21: KST 기준 날짜 구하기 (YYYY-MM-DD)
+    function getKSTDateStr(dateObj = new Date()) {
+      const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
+      const kstOffset = 9 * 60 * 60000;
+      const kstDate = new Date(utc + kstOffset);
+      return kstDate.toISOString().split('T')[0];
+    }
+
+    // 저장된 기록 가져오기
+    function getStoredRecords() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    }
+
+    // C20, C21: 하루 한 줄 규칙 (같은 날짜는 덮어쓰기/합침, 다른 날짜는 추가)
+    function saveRecord(newRecord) {
+      let records = getStoredRecords();
+      const existingIdx = records.findIndex(r => r.date === newRecord.date);
+      
+      if (existingIdx >= 0) {
+        records[existingIdx] = newRecord; // 같은 날짜 재실행 시 1건으로 합침 (C20)
+      } else {
+        records.push(newRecord);          // 다음 날짜 성공 시 새 일별 기록 추가 (C21)
+      }
+      
+      records.sort((a, b) => a.date.localeCompare(b.date));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      renderRecordsTable(records);
+      updateDiffDisplay(records);
+    }
+
+    // C24: 두 기록을 날짜순으로 놓고 어제 대비 변화값 자동 계산
+    function updateDiffDisplay(records) {
+      const diffEl = document.getElementById("diff-val");
+      if (records.length < 2) {
+        diffEl.textContent = "비교 기록 부족 (2일 이상 필요 - RECOVER-D2 버튼을 눌러 생성 가능)";
+        diffEl.className = "";
+        return;
+      }
+
+      // 날짜순 두 기록
+      const yesterdayRecord = records[records.length - 2];
+      const todayRecord = records[records.length - 1];
+
+      const prev = yesterdayRecord.rawNum;
+      const curr = todayRecord.rawNum;
+      const diff = curr - prev;
+
+      if (diff > 0) {
+        diffEl.textContent = `+${diff.toLocaleString()} KRW (상승)`;
+        diffEl.className = "diff-up";
+      } else if (diff < 0) {
+        diffEl.textContent = `${diff.toLocaleString()} KRW (하락)`;
+        diffEl.className = "diff-down";
+      } else {
+        diffEl.textContent = "0 KRW (변동 없음)";
+        diffEl.className = "";
+      }
+    }
+
+    // 기록 테이블 출력
+    function renderRecordsTable(records) {
+      const tbody = document.getElementById("records-table");
+      if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">저장된 기록이 없습니다.</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = records.map(r => `
+        <tr>
+          <td><strong>${r.date}</strong></td>
+          <td>${Number(r.rawNum).toLocaleString()}</td>
+          <td>${r.unit}</td>
+          <td>${r.sourceTime}</td>
+        </tr>
+      `).join('');
+    }
+
+    // C10, C17, C18: UI 갱신 및 오래된 값(stale) 유지/표시 로직
+    function updateUI(data, isStale = false, errorCode = "none", errorMsg = "") {
+      if (data) {
+        // C10: 원자료-저장값-화면표시값 일치
+        document.getElementById("val").textContent = Number(data.rawNum).toLocaleString();
+        document.getElementById("unit").textContent = data.unit;
+        document.getElementById("source").textContent = data.source;
+        document.getElementById("source-time").textContent = data.sourceTime;
+        document.getElementById("fetched-at").textContent = data.fetchedAt;
+        document.getElementById("timezone").textContent = data.timezone;
+      }
+
+      // C18: 실패 시 마지막 정상값에 '오래된 값(stale)' 표시 붙음
+      document.getElementById("stale-badge").style.display = isStale ? "inline-block" : "none";
+
+      // C19: 실패 상태 시 다시 시도 버튼 및 에러 메시지
+      const statusEl = document.getElementById("status-msg");
+      const retryBtn = document.getElementById("retry-btn");
+      if (errorMsg) {
+        statusEl.textContent = `[에러 코드: ${errorCode}] ${errorMsg}`;
+        statusEl.style.display = "block";
+        retryBtn.style.display = "inline-block";
+      } else {
+        statusEl.style.display = "none";
+        retryBtn.style.display = "none";
+      }
+
+      updateDiffDisplay(getStoredRecords());
+    }
+
+    // C03, C11: 실시간 정상 조회 (API Key 없는 공개 원천)
+    async function fetchData() {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error(`HTTP 에러 상태코드: ${response.status}`);
+        
+        const result = await response.json();
+        if (result.status !== "0000") throw new Error("API 응답 status 에러");
+
+        const record = {
+          date: getKSTDateStr(),
+          rawNum: Number(result.data.closing_price),
+          unit: "KRW",
+          source: API_URL,
+          sourceTime: new Date(Number(result.data.date)).toISOString(),
+          fetchedAt: new Date().toISOString(),
+          timezone: "Asia/Seoul"
+        };
+
+        saveRecord(record);
+        updateUI(record, false, "none", "");
+      } catch (err) {
+        // C17: 실패 뒤에도 마지막 정상값이 지워지지 않고 stale 상태 유지
+        const records = getStoredRecords();
+        const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+        updateUI(lastRecord, true, "FETCH_ERROR", `실제 조회 실패: ${err.message}`);
+      }
+    }
+
+    // C12~C16, C19: 합성 실패 및 복구(RECOVER-D2) 시험 함수
+    function runFixture(type) {
+      const records = getStoredRecords();
+      const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+
+      switch(type) {
+        case 'delay':
+          // C12: 느린 외부 응답
+          updateUI(lastRecord, true, "TIMEOUT", "느린 외부 응답으로 인한 시간 초과가 발생했습니다.");
+          break;
+        case 'http_401':
+          // C13: 401/403 거절
+          updateUI(lastRecord, true, "HTTP_403", "외부 원천 접근권한이 거절되었습니다 (401/403).");
+          break;
+        case 'rate_limit':
+          // C14: 호출 제한
+          updateUI(lastRecord, true, "RATE_LIMIT", "외부 원천 호출 제한 횟수를 초과했습니다 (429).");
+          break;
+        case 'offline':
+          // C15: 오프라인
+          updateUI(lastRecord, true, "OFFLINE", "인터넷 연결이 오프라인 상태입니다.");
+          break;
+        case 'schema':
+          // C16: 응답 형식 변경
+          updateUI(lastRecord, true, "SCHEMA_MISMATCH", "외부 원천 응답 스키마/형식이 변경되었습니다.");
+          break;
+        case 'recover_d2':
+          // C19, C22: RECOVER-D2 복구 asset 재생 -> 상태 fresh, error_code none, 다음 날 일별 기록 정확히 1건 추가
+          const baseDateStr = lastRecord ? lastRecord.date : getKSTDateStr();
+          const baseDate = new Date(baseDateStr);
+          baseDate.setDate(baseDate.getDate() + 1); // 다음 날짜 계산
+          const nextDayStr = baseDate.toISOString().split('T')[0];
+
+          const recoverD2Record = {
+            date: nextDayStr,
+            rawNum: (lastRecord ? lastRecord.rawNum : 95000000) + 1500000,
+            unit: "KRW",
+            source: API_URL,
+            sourceTime: new Date().toISOString(),
+            fetchedAt: new Date().toISOString(),
+            timezone: "Asia/Seoul"
+          };
+          saveRecord(recoverD2Record);
+          updateUI(recoverD2Record, false, "none", "");
+          break;
+      }
+    }
+
+    // 페이지 접속 시 초기화
+    window.onload = () => {
+      const records = getStoredRecords();
+      renderRecordsTable(records);
+      fetchData();
+    };
+  </script>
+</body>
+</html>
